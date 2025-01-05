@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.modal-container {
+	position: fixed;
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	z-index: 50;
+	background: rgba(255,255,255,0.4);
+	backdrop-filter: blur(5px);
+	-webkit-backdrop-filter: blur(5px);
+	display: flex;
+	justify-content: center;
+	align-items: flex-start;
+}
+
+.animate-loading {
+	animation: animate-fadein 3s ease-in 1;
+}
+
+.animate-loaded {
+	animation: animate-fadein 0.3s ease-in 1;
+}
+
+@keyframes animate-fadein {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}

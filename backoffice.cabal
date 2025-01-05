@@ -1,0 +1,49 @@
+cabal-version:   3.0
+name:            backoffice
+version:         0
+
+executable app
+    main-is: Application.hs
+    build-depends:
+      , aeson
+      , base
+      , containers
+      , geohash
+      , ghc-experimental
+      , jsaddle-wasm
+      , miso
+      , time
+      , text
+      , utf8-string
+    hs-source-dirs: src
+
+    default-language: GHC2021
+
+    default-extensions: 
+      BlockArguments 
+      DuplicateRecordFields
+      LambdaCase 
+      LexicalNegation 
+      OverloadedStrings 
+      RecordWildCards
+      OverloadedRecordDot
+
+    ghc-options: -Wall -Wunused-packages -Wno-name-shadowing -Wredundant-constraints
+
+    other-modules:
+      Components.Header
+      Components.SignInModal
+      Components.FlightCalendar
+      Components.Icon
+      Components.Popover
+      Data.FlightScheduling
+      Extensions.Effect
+      Extensions.Time
+      Pages.NotFound
+      Pages.FlightScheduling
+      Pages.Reservations
+      Routes
+      Runtime.Fetch
+      Session
+
+    ghc-options: -no-hs-main -optl-mexec-model=reactor "-optl-Wl,--export=hs_start"

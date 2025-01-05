@@ -1,0 +1,14 @@
+dist/
+node_modules/
+dist-newstyle/
+
+ghc_wasm_jsffi.js
+
+*.nix
+*.lock
+server.js
+.DS_Store
+
+.wrangler/
+
+ghc_wasm_jsffi.js
