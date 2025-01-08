@@ -132,7 +132,7 @@ viewRouteFilter route filtered =
   if not filtered 
     then
       button_ 
-      [ class_ "rounded-full mr-2 mb-2 w-36 py-1 px-4 bg-gray-100 hover:bg-gray-800 hover:text-white"
+      [ class_ "rounded-full mr-2 mb-2 w-40 py-1 px-4 bg-gray-100 hover:bg-gray-800 hover:text-white"
       , onClick (AddRouteFilter route) 
       , title_ (FlightSchedulingData.formatFlightRoute route)
       ]
@@ -140,7 +140,7 @@ viewRouteFilter route filtered =
       ]
     else
       button_ 
-      [ class_ "rounded-full mr-2 mb-2 w-36 py-1 px-4 bg-gray-800 text-white hover:bg-gray-600"
+      [ class_ "rounded-full mr-2 mb-2 w-40 py-1 px-4 bg-gray-800 text-white hover:bg-gray-600"
       , onClick (RemoveRouteFilter route)
       , title_ (FlightSchedulingData.formatFlightRoute route)
       ]
@@ -160,7 +160,7 @@ viewAirshipFilter airship filtered =
   if not filtered 
     then
       button_
-      [ class_ "rounded-full mr-2 mb-2 w-36 py-1 px-4 bg-gray-100 hover:bg-gray-800 hover:text-white"
+      [ class_ "rounded-full mr-2 mb-2 w-40 py-1 px-4 bg-gray-100 hover:bg-gray-800 hover:text-white"
       , onClick (AddAirshipFilter airship) 
       , title_ airship.name
       ]
@@ -168,7 +168,7 @@ viewAirshipFilter airship filtered =
       ]
     else
       button_ 
-      [ class_ "rounded-full mr-2 mb-2 w-36 py-1 px-4 bg-gray-800 text-white hover:bg-gray-600"
+      [ class_ "rounded-full mr-2 mb-2 w-40 py-1 px-4 bg-gray-800 text-white hover:bg-gray-600"
       , onClick (RemoveAirshipFilter airship) 
       , title_ airship.name
       ]
