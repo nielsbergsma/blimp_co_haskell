@@ -6,9 +6,10 @@ module Pages.FlightScheduling
   , viewModel
   ) where
 
+import Prelude hiding (show)
 import Data.Function ((&))
 import Data.List (sortOn)
-import Data.Text (Text, pack)
+import Data.Text (Text, show)
 import Miso
 
 import Session (Session(..))
@@ -110,7 +111,7 @@ viewAirship airship =
   , div_ [ class_ "text-xs pt-2 text-gray-400" ]
     [ text "Number of seats"
     ]
-  , text (showText airship.numberOfSeats)
+  , text (show airship.numberOfSeats)
   ]
 
 
@@ -150,7 +151,7 @@ formatAirfieldMapUrl airfield =
 
 formatLocationAsGoogleMapsUrl :: FlightSchedulingData.GeoHash -> Text
 formatLocationAsGoogleMapsUrl hash = 
-  "https://www.google.com/maps/search/?api=1&query=" <> showText latitude <> "," <> showText longitude
+  "https://www.google.com/maps/search/?api=1&query=" <> show latitude <> "," <> show longitude
     where 
       (latitude, longitude) = FlightSchedulingData.geoHashToLatLng hash
 
@@ -173,12 +174,9 @@ formatLocationCoordinatesDD hash =
         FlightSchedulingData.geoHashToLatLng hash
 
       format2f x = 
-        showText $ fromIntegral (truncate (x * 100)) / 100
+        show $ fromIntegral (truncate (x * 100)) / 100
 
 
 setCalendar :: Model -> FlightCalendar.Model -> Model
 setCalendar (model@Ready {}) calendar = model { calendar = calendar }
 setCalendar model _ = model
-
-showText :: Show a => a -> Text
-showText = pack . show

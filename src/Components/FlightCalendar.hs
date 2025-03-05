@@ -6,8 +6,9 @@ module Components.FlightCalendar
   , viewModel
   ) where
 
+import Prelude hiding (show)
 import Data.List (nub, sort, sortOn)
-import Data.Text (Text, pack)
+import Data.Text (Text, pack, show)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Time.Format (formatTime, defaultTimeLocale)
@@ -299,12 +300,12 @@ timeOfDepartureOrArrivalOnDay day flight =
 
 formatYearMonth :: YearMonth -> Text
 formatYearMonth (YearMonth year month) = 
-  (formatLongMonth month) <> " " <> (showText year)
+  (formatLongMonth month) <> " " <> (show year)
 
 
 formatMonthDay :: Day -> Text
 formatMonthDay day = 
-  (formatShortWeekday weekday) <> " " <> (showText dayOfMonth)
+  (formatShortWeekday weekday) <> " " <> (show dayOfMonth)
     where
       weekday = dayOfWeek day
       (_, _, dayOfMonth) = toGregorian day
@@ -357,13 +358,9 @@ flightOccurred time flight =
 
 formatFlightPopoverId :: Day -> FlightSchedulingData.Flight -> Text
 formatFlightPopoverId day flight = 
-  FlightSchedulingData.formatFlightId flight.id <> "/" <> showText dayOfMonth
+  FlightSchedulingData.formatFlightId flight.id <> "/" <> show dayOfMonth
     where
       (_, _, dayOfMonth) = toGregorian day
-
-
-showText :: Show a => a -> Text
-showText = pack . show
 
 
 noHtml :: View Action 
