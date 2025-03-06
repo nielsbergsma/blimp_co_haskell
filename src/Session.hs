@@ -15,12 +15,12 @@ import Miso (Decoder(..), DecodeTarget(..), Sub, windowSub)
 
 
 data Session 
-  = Session { name :: Text, photoUrl :: Maybe Text, token :: Text}
+  = Session { name :: Text, photoUrl :: Maybe Text, token :: Text }
   deriving (Eq)
 
 
 signInDemo :: MonadIO m => m ()
-signInDemo = liftIO js_signin_demo
+signInDemo = liftIO jsSignInDemo
 
 
 subscribeToSignedIn :: (Session -> action) -> Sub action
@@ -33,7 +33,7 @@ subscribeToSignedIn action = windowSub "signedin" decoder action
 
 
 signOut :: MonadIO m => m ()
-signOut = liftIO js_signout
+signOut = liftIO jsSignOut
 
 
 subscribeToSignedOut :: action -> Sub action
@@ -46,7 +46,7 @@ subscribeToSignedOut action = windowSub "signedout" decoder (const action)
 
 
 restore :: MonadIO m => m ()
-restore = liftIO js_restore_session
+restore = liftIO jsRestoreSession
   
 
 -- decoders
@@ -73,10 +73,10 @@ instance FromJSON Session where
 
 -- foreign imports / exports
 foreign import javascript safe "signInDemo();"
-  js_signin_demo :: IO ()
+  jsSignInDemo :: IO ()
 
 foreign import javascript safe "signOut();"
-  js_signout :: IO ()
+  jsSignOut :: IO ()
 
 foreign import javascript safe "restoreSession();"
-  js_restore_session :: IO ()
+  jsRestoreSession :: IO ()

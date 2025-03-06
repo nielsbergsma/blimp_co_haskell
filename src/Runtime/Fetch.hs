@@ -23,7 +23,7 @@ data HttpResponse a
 
 fetch :: (FromJSON a, MonadIO m) => HttpRequest -> m (HttpResponse a)
 fetch request = do
-  response <- liftIO $ pack . fromJSString <$> js_fetch (toJSString . UTF8.toString . encode $ request)
+  response <- liftIO $ pack . fromJSString <$> jsFetch (toJSString . UTF8.toString . encode $ request)
   case eitherDecodeStrictText response of
     Left error -> 
       return (Error (pack error))
@@ -49,4 +49,4 @@ instance (FromJSON a) => FromJSON (HttpResponse a) where
 
 -- foreign imports / exports
 foreign import javascript safe "try { const o = JSON.parse($1); const r = await fetch(o.url.replace('@backend', backendUrl), o); return JSON.stringify({ status: r.status, headers: r.headers, body: await r.json() }); } catch(e) { return { error: e.toString()}; };"
-  js_fetch :: JSString -> IO JSString
+  jsFetch :: JSString -> IO JSString

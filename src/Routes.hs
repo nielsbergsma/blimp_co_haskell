@@ -39,13 +39,13 @@ defaultRoute = FlightScheduling
 -- helpers
 currentRoute :: MonadIO m => m (Maybe Route)
 currentRoute = do
-  pathname <- liftIO $ js_location_pathname
+  pathname <- liftIO jsLocationPathname
   return . fromText . pack . fromJSString $ pathname
 
 
 pushState :: MonadIO m => Route -> action -> m action
 pushState route action = do 
-  _ <- liftIO . js_history_pushstate . toJSString . unpack . toText $ route
+  _ <- liftIO . jsHistoryPushState . toJSString . unpack . toText $ route
   return action
 
 
@@ -60,8 +60,8 @@ subscribeToChanges action = windowSub "routechanged" decoder action
 
 -- foreign imports / exports
 foreign import javascript safe "history.pushState({}, '', $1);"
-  js_history_pushstate :: JSString -> IO ()
+  jsHistoryPushState :: JSString -> IO ()
 
 
 foreign import javascript safe "return window.location.pathname;"
-  js_location_pathname :: IO JSString
+  jsLocationPathname :: IO JSString
