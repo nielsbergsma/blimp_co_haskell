@@ -27,7 +27,7 @@ This application also demonstrates the use of HTML Web Components. See [js/compo
 
 A hosted version of the application is available at [https://backoffice-hs.software-craftsmen.dev](https://backoffice-hs.software-craftsmen.dev).
 
-The resulting WebAssembly file is 3.4 MB (uncompressed) and 940 KB (compressed with zstd). It works in all recent major browsers.
+The resulting WebAssembly file is 2.3 MB (uncompressed) and 941 KB (compressed with zstd). It works in all recent major browsers.
 
 ## Installation
 
