@@ -20,7 +20,7 @@ build@release: compile
 	${shell wasm32-wasi-ghc --print-libdir}/post-link.mjs --input dist/app.wasm.0 --output dist/js/ghc_wasm_jsffi.js
 
 	env -i GHCRTS=-H64m "$(shell type -P wizer)" --allow-wasi --wasm-bulk-memory true --inherit-env true --init-func _initialize -o dist/app.wasm.1 dist/app.wasm.0
-	wasm-opt -Oz dist/app.wasm.1 -o dist/app.wasm.2
+	wasm-opt --low-memory-unused --strip-dwarf --converge -O4 -Oz  dist/app.wasm.1 -o dist/app.wasm.2
 	wasm-tools strip -o dist/app.wasm dist/app.wasm.2
 	rm dist/app.wasm.*
 
@@ -33,7 +33,7 @@ build@release: compile
 	cd dist && npx --yes esbuild --minify --format=esm --bundle js/index.js --outfile=js/index.js --allow-overwrite
 	rm dist/js/components.js dist/js/ghc_wasm_jsffi.js dist/js/routing.js dist/js/session.js
 
-deploy: build@release
+deploy: 
 	sed -i -e 's/backendUrl = "http:\/\/localhost:5002"/backendUrl = "TODO"/g' dist/index.html
 	npx --yes wrangler pages deploy dist/ --project-name backoffice-hs
 
