@@ -3,6 +3,7 @@
 This codebase is a re-implementation of the Elm "backoffice" web application, found [here](https://github.com/nielsbergsma/blimp_co_elm/tree/main/frontend/backoffice), in Haskell. It was developed for a Medium article that explores how to apply Domain-Driven Design in an edge-computing environment. More details are covered in the article.
 
 **Note:** This codebase originated as a fork of [ghc-wasm-miso-examples](https://github.com/tweag/ghc-wasm-miso-examples).
+
 **Note:** The [Medium article is here](https://medium.com/@n.bergsma/from-chaos-to-clarity-applying-domain-driven-design-with-functional-languages-in-a-serverless-wild-674d6bca8149)
 
 ## Implementation
