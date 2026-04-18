@@ -1,9 +1,5 @@
 module Pages.NotFound
-  ( Model (..) 
-  , Action (..)
-  , initModel
-  , updateModel
-  , viewModel
+  ( notFound
   ) where
 
 import Miso
@@ -19,14 +15,20 @@ data Action
   deriving (Eq)
 
 
-initModel :: Effect Action Model
-initModel = return Ready
+notFound :: Component parent Model Action
+notFound = 
+  component initModel updateModel viewModel
 
 
-updateModel :: Action -> Model -> Effect Action Model
-updateModel NoOperation model = 
-  return model
+initModel :: Model
+initModel = Ready
 
 
-viewModel :: Model -> View Action
-viewModel _ = text "Page cannot be found"
+updateModel :: Action -> Effect parent Model Action
+updateModel = 
+  noop
+
+
+viewModel :: Model -> View Model Action
+viewModel _ = 
+  text "Page cannot be found"

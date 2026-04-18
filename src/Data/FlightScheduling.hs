@@ -1,3 +1,5 @@
+{-# OPTIONS -fno-warn-orphans #-}
+
 module Data.FlightScheduling 
   ( Dashboard(..)
   , Airship(..)
@@ -16,16 +18,19 @@ module Data.FlightScheduling
   , formatFlightRoute
   ) where
 
-import Control.Monad.IO.Class (MonadIO)
-import Data.Aeson hiding (Success, Error)
-import Data.Aeson.Types (Parser, unexpected)
+import Prelude hiding (id)
+import Control.Applicative ((<|>))
 import Data.Foldable (toList)
 import Data.List (find)
-import qualified Data.Geohash as Geohash
+import Data.Geohash qualified as Geohash
 import Data.Text (Text, unpack)
 import Data.Time.LocalTime (ZonedTime(..))
+import Data.Time (parseTimeM, defaultTimeLocale)
 
-import Runtime.Fetch (HttpRequest(..), HttpResponse(..), fetch)
+import Configuration (backendUrl)
+import Miso (Effect, MisoString, toMisoString, fromMisoString)
+import Miso.JSON
+import Miso.Fetch (getJSON, Response(..))
 
 
 -- model
@@ -103,34 +108,30 @@ geoHashToLatLng :: GeoHash -> (Float, Float)
 geoHashToLatLng (GeoHash coordinate) = coordinate
 
 
-formatAirshipId :: AirshipId -> Text
-formatAirshipId (AirshipId id) = id
+formatAirshipId :: AirshipId -> MisoString
+formatAirshipId (AirshipId id) = toMisoString id
 
 
-formatAirfieldId :: AirfieldId -> Text
-formatAirfieldId (AirfieldId id) = id
+formatAirfieldId :: AirfieldId -> MisoString
+formatAirfieldId (AirfieldId id) = toMisoString id
 
 
-formatFlightId :: FlightId -> Text
-formatFlightId (FlightId id) = id
+formatFlightId :: FlightId -> MisoString
+formatFlightId (FlightId id) = toMisoString id
 
 
-formatFlightRoute :: FlightRoute -> Text
+formatFlightRoute :: FlightRoute -> MisoString
 formatFlightRoute (FlightRoute (departure, arrival)) = 
-  (formatAirfieldId departure.id) <> "-" <> (formatAirfieldId arrival.id)
+  toMisoString (formatAirfieldId departure.id) <> "-" <> toMisoString (formatAirfieldId arrival.id)
 
 
 instance Eq ZonedTime where
   (ZonedTime lt1 tz1) == (ZonedTime lt2 tz2) = lt1 == lt2 && tz1 == tz2
 
 
--- request / response
-fetchDashboard :: MonadIO m => m (Either Text Dashboard)
-fetchDashboard = do
-  response <- fetch (HttpRequest { method = "GET", url = "@backend/dashboard" })
-  case response of 
-    Success { body } -> return (Right body)
-    Error reason -> return (Left reason)
+fetchDashboard :: (Either MisoString Dashboard -> action) -> Effect parent model action
+fetchDashboard toAction = do
+  getJSON (backendUrl <> "/dashboard") [] (toAction . Right . body) (toAction . Left . body)
 
 -- decoders
 instance FromJSON Dashboard where
@@ -145,7 +146,7 @@ dashboardParser (Object value) = do
   return (Dashboard airfields airships flights)
 
 dashboardParser value = 
-  unexpected value
+  typeMismatch "expected object" value
 
 
 flightsParser :: [Airship] -> [Airfield] -> Value -> Parser [Flight]
@@ -153,7 +154,7 @@ flightsParser airships airfields (Array value) =
   toList <$> mapM (flightParser airships airfields) value
 
 flightsParser _ _ value = 
-  unexpected value
+  typeMismatch "expected list" value
 
 
 flightParser :: [Airship] -> [Airfield] -> Value -> Parser Flight
@@ -165,15 +166,26 @@ flightParser airships airfields (Object value) = do
   return (Flight id departure arrival airship)
 
 flightParser _ _ value = 
-    unexpected value
+  typeMismatch "expected object" value
 
 
 instance FromJSON FlightId where
   parseJSON (String value) = 
-    return $ FlightId value
+    return (FlightId (fromMisoString value))
 
   parseJSON value = 
-    unexpected value
+    typeMismatch "expected string" value
+
+
+instance FromJSON ZonedTime where
+  parseJSON (String value) = do
+    tryParse "%Y-%m-%dT%H:%M:%S%Ez" stringValue <|> tryParse "%Y-%m-%dT%H:%M:%SZ" stringValue
+    where
+      stringValue = fromMisoString value
+      tryParse format = parseTimeM False defaultTimeLocale format
+
+  parseJSON value = 
+    typeMismatch "expected string" value
 
 
 flightArrivalParser :: [Airfield] -> Value -> Parser FlightArrival
@@ -183,7 +195,7 @@ flightArrivalParser airfields (Object value) = do
   return (FlightArrival time location)
 
 flightArrivalParser _ value = 
-  unexpected value
+  typeMismatch "expected object" value
 
 
 flightDepartureParser :: [Airfield] -> Value -> Parser FlightDeparture
@@ -193,15 +205,15 @@ flightDepartureParser airfields (Object value) = do
   return (FlightDeparture time location)
 
 flightDepartureParser _ value = 
-  unexpected value
+  typeMismatch "expected object" value
 
 
 instance FromJSON AirfieldId where
   parseJSON (String value) = 
-    return (AirfieldId value)
+    return (AirfieldId (fromMisoString value))
 
   parseJSON value = 
-    unexpected value
+    typeMismatch "expected string" value
 
 
 instance FromJSON Airfield where
@@ -213,15 +225,15 @@ instance FromJSON Airfield where
       <*> value .: "time_zone"
 
   parseJSON value = 
-    unexpected value
+    typeMismatch "expected object" value
 
 
 instance FromJSON AirshipId where
   parseJSON (String value) = 
-    return (AirshipId value)
+    return (AirshipId (fromMisoString value))
   
   parseJSON value = 
-    unexpected value
+    typeMismatch "expected string" value
 
 
 instance FromJSON Airship where
@@ -233,25 +245,25 @@ instance FromJSON Airship where
       <*> value .: "number_of_seats"
   
   parseJSON value = 
-    unexpected value
+    typeMismatch "expected object" value
 
 
 instance FromJSON TimeZone where
   parseJSON (String value) = 
-    return (TimeZone value)
+    return (TimeZone (fromMisoString value))
   
   parseJSON value = 
-    unexpected value
+    typeMismatch "expected string" value
 
 
 instance FromJSON GeoHash where
   parseJSON (String value) = 
-    case Geohash.decode (unpack value) of
+    case Geohash.decode . unpack . fromMisoString $ value of
       Just coordinate -> return (GeoHash coordinate)
       Nothing -> fail "out of bounds"
 
   parseJSON value = 
-    unexpected value
+    typeMismatch "expected string" value
 
 
 lookupAirshipParser :: [Airship] -> Value -> Parser Airship

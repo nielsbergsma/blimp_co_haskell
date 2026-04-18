@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module Session
   ( Session(..)
   , signInDemo
@@ -7,21 +9,33 @@ module Session
   , restore
   ) where
 
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Aeson 
-import Data.Aeson.Types
-import Data.Text (Text)
-import Miso (Decoder(..), DecodeTarget(..), Sub, windowSub)
+import Miso (Decoder(..), DecodeTarget(..), Effect, Sub, windowSub, MisoString, fromMisoString, io_)
+import Miso.FFI.QQ (js)
+import Miso.JSON
+
+import GHC.Generics (Generic)
+import Data.Hashable (Hashable (hashWithSalt), hash)
+
+data Session = Session 
+  { name :: MisoString
+  , photoUrl :: Maybe MisoString
+  , token :: MisoString 
+  } deriving (Eq)
+
+instance Hashable Session where
+  hashWithSalt salt (Session{..}) = 
+    salt
+      `hashWithSalt` toString name
+      `hashWithSalt` fmap toString photoUrl
+      `hashWithSalt` toString token
+      
+      where 
+        toString :: MisoString -> String
+        toString = fromMisoString
 
 
-data Session 
-  = Session { name :: Text, photoUrl :: Maybe Text, token :: Text }
-  deriving (Eq)
-
-
-signInDemo :: MonadIO m => m ()
-signInDemo = liftIO jsSignInDemo
-
+signInDemo :: Effect parent model action
+signInDemo = io_ [js| signInDemo() |]
 
 subscribeToSignedIn :: (Session -> action) -> Sub action
 subscribeToSignedIn action = windowSub "signedin" decoder action
@@ -32,9 +46,8 @@ subscribeToSignedIn action = windowSub "signedin" decoder action
       }
 
 
-signOut :: MonadIO m => m ()
-signOut = liftIO jsSignOut
-
+signOut :: Effect parent model action
+signOut = io_ [js| signOut() |]
 
 subscribeToSignedOut :: action -> Sub action
 subscribeToSignedOut action = windowSub "signedout" decoder (const action)
@@ -45,9 +58,8 @@ subscribeToSignedOut action = windowSub "signedout" decoder (const action)
       }
 
 
-restore :: MonadIO m => m ()
-restore = liftIO jsRestoreSession
-  
+restore :: Effect parent model action
+restore = io_ [js| restoreSession() |]
 
 -- decoders
 eventDetailDecoder :: FromJSON a => Value -> Parser a
@@ -55,8 +67,8 @@ eventDetailDecoder =
   withObject "Event" $ \event -> do
     detail <- event .: "detail"
 
-    case eitherDecodeStrictText detail of 
-      Left error -> fail error 
+    case eitherDecode detail of 
+      Left problem -> fail (fromMisoString problem)
       Right value -> return value
 
 
@@ -68,15 +80,4 @@ instance FromJSON Session where
       <*> value .: "token"
   
   parseJSON value = 
-    unexpected value
-
-
--- foreign imports / exports
-foreign import javascript safe "signInDemo();"
-  jsSignInDemo :: IO ()
-
-foreign import javascript safe "signOut();"
-  jsSignOut :: IO ()
-
-foreign import javascript safe "restoreSession();"
-  jsRestoreSession :: IO ()
+    typeMismatch "expected object" value

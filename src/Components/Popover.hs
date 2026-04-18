@@ -3,17 +3,17 @@ module Components.Popover
   , popover
   ) where
 
-import Data.Text (Text)
 import Miso
+import Miso.Html.Element (nodeHtml)
 
 
 data PopoverOrientation = OrientateLeft | OrientateRight
 
 
-popover :: Text -> PopoverOrientation -> [View action] -> View action 
-popover for orientation =
+popover :: MisoString -> PopoverOrientation -> [View model action] -> View model action 
+popover for_ orientation =
   nodeHtml "x-popover"
-  [ textProp "for" for
+  [ textProp "for" for_
   , textProp "orientation" (formatOrientation orientation)
   ]
   where 

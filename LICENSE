@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) Tweag I/O Limited.
+Copyright (c) 2026 Niels Bergsma
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+This software uses miso (https://github.com/dmjio/miso),
+Copyright (c) 2016-2026 David M. Johnson, licensed under the BSD3 license.

@@ -9,14 +9,13 @@ module Extensions.Time
   , firstDayOfTheMonth
   , formatShortWeekday
   , formatLongMonth
+  , formatYear
   , daysOfMonth
-  , currentUTCTime
   , defaultUTCTime
   ) where
 
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Text (Text)
-import Data.Time.Clock (UTCTime(..), DiffTime, getCurrentTime)
+import Miso (MisoString, toMisoString)
+import Data.Time.Clock (UTCTime(..), DiffTime)
 import Data.Time.Calendar (Year, MonthOfYear, DayOfWeek(..), Day, toGregorian, fromGregorian, gregorianMonthLength)
 import Data.Time.LocalTime (ZonedTime(..), LocalTime(..), TimeOfDay(..))
 
@@ -63,7 +62,7 @@ firstDayOfTheMonth day =
       (year, month, _) = toGregorian day
 
 
-formatShortWeekday :: DayOfWeek -> Text
+formatShortWeekday :: DayOfWeek -> MisoString
 formatShortWeekday Monday = "Mon" 
 formatShortWeekday Tuesday = "Tue" 
 formatShortWeekday Wednesday = "Wed" 
@@ -73,7 +72,7 @@ formatShortWeekday Saturday = "Sat"
 formatShortWeekday Sunday = "Sun" 
 
 
-formatLongMonth :: Int -> Text
+formatLongMonth :: Int -> MisoString
 formatLongMonth 1 = "January"
 formatLongMonth 2 = "February"
 formatLongMonth 3 = "March"
@@ -88,6 +87,8 @@ formatLongMonth 11 = "November"
 formatLongMonth 12 = "December"
 formatLongMonth _ = ""
 
+formatYear :: Year -> MisoString
+formatYear = toMisoString . show
 
 daysOfMonth :: YearMonth -> [Day]
 daysOfMonth (YearMonth year month) =
@@ -95,9 +96,5 @@ daysOfMonth (YearMonth year month) =
     where
       daysInMonth = gregorianMonthLength year month
 
-
-currentUTCTime :: MonadIO m => m UTCTime
-currentUTCTime = liftIO getCurrentTime
-
 defaultUTCTime :: UTCTime
-defaultUTCTime = UTCTime (fromGregorian 2025 1 1) (0 :: DiffTime)
+defaultUTCTime = UTCTime (fromGregorian 2025 6 1) (0 :: DiffTime)

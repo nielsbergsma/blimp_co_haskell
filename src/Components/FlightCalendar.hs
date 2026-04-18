@@ -1,26 +1,24 @@
 module Components.FlightCalendar
-  ( Model (..)
-  , Action
-  , initModel
-  , updateModel
-  , viewModel
+  ( flightCalendar
   ) where
 
 import Prelude hiding (show)
 import Data.List (nub, sort, sortOn)
-import Data.Text (Text, pack, show)
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Data.Time.Format (formatTime, defaultTimeLocale)
 import Data.Time.Calendar (Day, DayOfWeek(..), dayOfWeek, toGregorian)
 import Data.Time.Clock (UTCTime)
 import Data.Time.LocalTime (ZonedTime, TimeOfDay, zonedTimeToUTC)
-import qualified Data.FlightScheduling as FlightSchedulingData
-import Miso
+import Data.FlightScheduling qualified as FlightSchedulingData
 
-import qualified Components.Icon as Icon
+import Miso
+import Miso.Html.Element (button_, div_, h2_, h3_)
+import Miso.Html.Event (onClick)
+import Miso.Html.Property (class_, id_, title_)
+
+import Components.Icon qualified as Icon
 import Components.Popover (PopoverOrientation(..), popover)
-import qualified Extensions.Effect as Effect
 import Extensions.Time
 
 
@@ -47,41 +45,44 @@ data Action
   deriving (Eq)
 
 
-initModel :: FlightSchedulingData.Dashboard -> Effect Action Model
+flightCalendar :: FlightSchedulingData.Dashboard -> Component parent Model Action
+flightCalendar dashboard = 
+  component (initModel dashboard) updateModel viewModel
+
+
+initModel :: FlightSchedulingData.Dashboard -> Model
 initModel dashboard = 
-  Effect.return
-    (Model dashboard (yearMonthFromUTCTime defaultUTCTime) defaultUTCTime mempty mempty Nothing)
-    (SetTime <$> currentUTCTime)
+  (Model dashboard (yearMonthFromUTCTime defaultUTCTime) defaultUTCTime mempty mempty Nothing)
 
+updateModel :: Action -> Effect parent Model Action
+updateModel = \case
+  (SetTime time) -> 
+    modify $ \model -> model { time = time, month = yearMonthFromUTCTime time }
 
-updateModel :: Action -> Model -> Effect Action Model
-updateModel (SetTime time) model@(Model {}) = 
-  return (model { time = time, month = yearMonthFromUTCTime time })
+  (SetMonth month) ->
+   modify $ \model -> (model { month = month, flightPopover = Nothing })
 
-updateModel (SetMonth month) model@(Model {}) = 
-  return (model { month = month, flightPopover = Nothing })
+  (AddRouteFilter route) ->
+    modify $ \model -> model { filteredRoutes = Set.insert route model.filteredRoutes, flightPopover = Nothing }
 
-updateModel (AddRouteFilter route) model@(Model {..}) = 
-  return (model { filteredRoutes = Set.insert route filteredRoutes, flightPopover = Nothing })
+  (RemoveRouteFilter route) -> 
+    modify $ \model -> model { filteredRoutes = Set.delete route model.filteredRoutes }
 
-updateModel (RemoveRouteFilter route) model@(Model {..}) = 
-  return (model { filteredRoutes = Set.delete route filteredRoutes })
+  (AddAirshipFilter airship) ->
+    modify $ \model -> model { filteredAirships = Set.insert airship model.filteredAirships, flightPopover = Nothing }
 
-updateModel (AddAirshipFilter airship) model@(Model {..}) = 
-  return (model { filteredAirships = Set.insert airship filteredAirships, flightPopover = Nothing })
+  (RemoveAirshipFilter airship) -> 
+    modify $ \model -> model { filteredAirships = Set.delete airship model.filteredAirships }
 
-updateModel (RemoveAirshipFilter airship) model@(Model {..}) = 
-  return (model { filteredAirships = Set.delete airship filteredAirships })
+  (OpenFlightPopover flightOnDay) -> 
+    modify $ \model -> model { flightPopover = Just flightOnDay }
 
-updateModel (OpenFlightPopover flightOnDay) model@(Model {}) = 
-  return (model { flightPopover = Just flightOnDay })
-
-updateModel (CloseFlightPopover) model@(Model {}) = 
-  return (model { flightPopover = Nothing })
+  (CloseFlightPopover) -> 
+    modify $ \model -> model { flightPopover = Nothing }
 
 
 
-viewModel :: Model -> View Action
+viewModel :: Model -> View Model Action
 viewModel (Model {..}) = 
   div_ []
   [ viewRouteFilters (flightRoutes dashboard.flights) filteredRoutes
@@ -99,7 +100,7 @@ viewModel (Model {..}) =
   ]
 
 
-viewHeader :: YearMonth -> View Action
+viewHeader :: YearMonth -> View Model Action
 viewHeader month = 
   div_ [ class_ "mt-8" ]
   [ h3_ [ class_ "text-xl flex gap-2" ] 
@@ -122,13 +123,13 @@ viewHeader month =
   ]
 
 
-viewRouteFilters :: [FlightSchedulingData.FlightRoute] -> Set FlightSchedulingData.FlightRoute -> View Action
+viewRouteFilters :: [FlightSchedulingData.FlightRoute] -> Set FlightSchedulingData.FlightRoute -> View Model Action
 viewRouteFilters routes filters = 
   div_ [ class_ "text-sm my-2" ]
   ((\route -> viewRouteFilter route (Set.member route filters)) <$> sort routes)
 
 
-viewRouteFilter :: FlightSchedulingData.FlightRoute -> Bool -> View Action
+viewRouteFilter :: FlightSchedulingData.FlightRoute -> Bool -> View Model Action
 viewRouteFilter route filtered = 
   if not filtered 
     then
@@ -150,20 +151,20 @@ viewRouteFilter route filtered =
       ]
 
 
-viewAirshipFilters :: [FlightSchedulingData.Airship] -> Set FlightSchedulingData.Airship -> View Action
+viewAirshipFilters :: [FlightSchedulingData.Airship] -> Set FlightSchedulingData.Airship -> View Model Action
 viewAirshipFilters airships filters = 
   div_ [ class_ "text-sm my-2" ]
   ((\airship -> viewAirshipFilter airship (Set.member airship filters)) <$> sortOn (\airship -> airship.id) airships)
 
 
-viewAirshipFilter :: FlightSchedulingData.Airship -> Bool -> View Action
+viewAirshipFilter :: FlightSchedulingData.Airship -> Bool -> View Model Action
 viewAirshipFilter airship filtered = 
   if not filtered 
     then
       button_
       [ class_ "rounded-full mr-2 mb-2 w-40 py-1 px-4 bg-gray-100 hover:bg-gray-800 hover:text-white"
       , onClick (AddAirshipFilter airship) 
-      , title_ airship.name
+      , title_ (toMisoString airship.name)
       ]
       [ text (FlightSchedulingData.formatAirshipId airship.id)
       ]
@@ -171,14 +172,14 @@ viewAirshipFilter airship filtered =
       button_ 
       [ class_ "rounded-full mr-2 mb-2 w-40 py-1 px-4 bg-gray-800 text-white hover:bg-gray-600"
       , onClick (RemoveAirshipFilter airship) 
-      , title_ airship.name
+      , title_ (toMisoString airship.name)
       ]
       [ Icon.filter [ class_ "w-4 h-4 mr-2" ]
       , text (FlightSchedulingData.formatAirshipId airship.id)
       ]
 
 
-viewDay :: Day -> FlightOccurred -> [FlightSchedulingData.Flight] -> View Action
+viewDay :: Day -> FlightOccurred -> [FlightSchedulingData.Flight] -> View Model Action
 viewDay day occured flights =
   div_ [ class_ ("rounded-md bg-gray-50 min-h-[7rem] p-2 " <> columnOffset) ]
   [ div_ [ class_ "mb-2 text-gray-400 text-xs" ]
@@ -194,7 +195,7 @@ viewDay day occured flights =
         else ""
 
 
-viewFlight :: Day -> FlightOccurred -> FlightSchedulingData.Flight -> View Action
+viewFlight :: Day -> FlightOccurred -> FlightSchedulingData.Flight -> View Model Action
 viewFlight day occurred flight = 
   let 
     background = if occurred flight then "bg-gray-500" else "bg-gray-800"
@@ -214,7 +215,7 @@ viewFlight day occurred flight =
     ]
 
 
-viewFlightPopover :: Day -> FlightOccurred -> FlightSchedulingData.Flight -> View Action
+viewFlightPopover :: Day -> FlightOccurred -> FlightSchedulingData.Flight -> View Model Action
 viewFlightPopover day occurred flight = 
   popover forElementId orientation
   [ div_ [ class_ ("w-96 h-80 -mt-28 text-white p-4 rounded-md shadow-lg" <> orientationClass <> backgroundClass) ]
@@ -233,7 +234,7 @@ viewFlightPopover day occurred flight =
       [ text (formatLocalDayAndTime flight.departure.time)
       ]
     , div_ []
-      [ text flight.departure.location.name 
+      [ text (toMisoString flight.departure.location.name)
       , text (" (" <>  FlightSchedulingData.formatAirfieldId flight.departure.location.id <> ")")
       ]
 
@@ -245,7 +246,7 @@ viewFlightPopover day occurred flight =
       [ text (formatLocalDayAndTime flight.arrival.time)
       ]
     , div_ [ ]
-      [ text flight.arrival.location.name
+      [ text (toMisoString flight.arrival.location.name)
       , text (" (" <>  FlightSchedulingData.formatAirfieldId flight.arrival.location.id <> ")")
       ]
 
@@ -255,11 +256,11 @@ viewFlightPopover day occurred flight =
       ]
     , div_ []
       [ div_ []
-        [ text flight.airship.name
+        [ text (toMisoString flight.airship.name)
         , text (" (" <> FlightSchedulingData.formatAirshipId flight.airship.id <> ")")
         ]
       , div_ []
-        [ text (flight.airship.model)
+        [ text (toMisoString flight.airship.model)
         ]
       ]
     ]
@@ -288,7 +289,8 @@ flightsOfDay filteredRoutes filteredAirships day flights =
 
 
 flightRoutes :: [FlightSchedulingData.Flight] -> [FlightSchedulingData.FlightRoute]
-flightRoutes flights = nub (FlightSchedulingData.route <$> flights)
+flightRoutes flights = 
+  nub (FlightSchedulingData.route <$> flights)
 
 
 timeOfDepartureOrArrivalOnDay :: Day -> FlightSchedulingData.Flight -> TimeOfDay
@@ -298,20 +300,20 @@ timeOfDepartureOrArrivalOnDay day flight =
   else timeOfZonedTime flight.arrival.time
 
 
-formatYearMonth :: YearMonth -> Text
+formatYearMonth :: YearMonth -> MisoString
 formatYearMonth (YearMonth year month) = 
-  (formatLongMonth month) <> " " <> (show year)
+  (formatLongMonth month) <> " " <> (formatYear year)
 
 
-formatMonthDay :: Day -> Text
+formatMonthDay :: Day -> MisoString
 formatMonthDay day = 
-  (formatShortWeekday weekday) <> " " <> (show dayOfMonth)
+  (formatShortWeekday weekday) <> " " <> (toMisoString dayOfMonth)
     where
       weekday = dayOfWeek day
       (_, _, dayOfMonth) = toGregorian day
 
 
-formatDayCollumnOffset :: DayOfWeek -> Text
+formatDayCollumnOffset :: DayOfWeek -> MisoString
 formatDayCollumnOffset Monday = "col-start-1"
 formatDayCollumnOffset Tuesday = "col-start-2"
 formatDayCollumnOffset Wednesday = "col-start-3"
@@ -321,24 +323,24 @@ formatDayCollumnOffset Saturday = "col-start-6"
 formatDayCollumnOffset Sunday = "col-start-7"
 
 
-formatFlightTime :: Day -> FlightSchedulingData.Flight -> Text
+formatFlightTime :: Day -> FlightSchedulingData.Flight -> MisoString
 formatFlightTime day flight = 
-  formatTime flight.departure.time <> " - " <> formatTime flight.arrival.time
+  format flight.departure.time <> " - " <> format flight.arrival.time
     where
-      formatTime time = 
+      format time = 
         if dayOfZonedTime time == day
         then formatLocalTime time 
         else "..."
 
 
-formatLocalTime :: ZonedTime -> Text 
+formatLocalTime :: ZonedTime -> MisoString 
 formatLocalTime = 
-  pack <$> formatTime defaultTimeLocale "%H:%M"
+  toMisoString <$> formatTime defaultTimeLocale "%H:%M"
 
 
-formatLocalDayAndTime :: ZonedTime -> Text 
+formatLocalDayAndTime :: ZonedTime -> MisoString 
 formatLocalDayAndTime = 
-  pack <$> formatTime defaultTimeLocale "%Y-%m-%dT%H:%M%Ez"
+  toMisoString <$> formatTime defaultTimeLocale "%Y-%m-%dT%H:%M%Ez"
 
 
 popoverOrientation :: DayOfWeek -> PopoverOrientation
@@ -356,12 +358,12 @@ flightOccurred time flight =
   time > zonedTimeToUTC flight.arrival.time
 
 
-formatFlightPopoverId :: Day -> FlightSchedulingData.Flight -> Text
+formatFlightPopoverId :: Day -> FlightSchedulingData.Flight -> MisoString
 formatFlightPopoverId day flight = 
-  FlightSchedulingData.formatFlightId flight.id <> "/" <> show dayOfMonth
+  FlightSchedulingData.formatFlightId flight.id <> "/" <> toMisoString dayOfMonth
     where
       (_, _, dayOfMonth) = toGregorian day
 
 
-noHtml :: View Action 
+noHtml :: View Model Action 
 noHtml = text ""

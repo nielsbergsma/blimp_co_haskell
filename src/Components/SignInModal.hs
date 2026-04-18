@@ -1,18 +1,36 @@
 module Components.SignInModal
-  ( Action(..)
-  , viewModel
+  ( signInModal
   ) where
 
 import Miso
+import Miso.Html.Element (div_, button_, h1_, h2_)
+import Miso.Html.Event (onClick)
+import Miso.Html.Property (class_)
+
 import Components.Icon as Icon
+import Session (signInDemo)
+
+signInModal :: Component parent Model Action
+signInModal = 
+  component initModel updateModel viewModel
+
+data Model = Model
+  deriving (Eq)
+
+initModel :: Model
+initModel = 
+  Model
 
 data Action 
   = SignInDemo
   deriving (Eq)
 
+updateModel :: Action -> Effect parent Model Action
+updateModel SignInDemo = 
+  signInDemo
 
-viewModel :: View Action
-viewModel = 
+viewModel :: Model -> View Model Action
+viewModel _ = 
   div_ [ class_ "bg-gray-800 w-[48rem] shadow-2xl rounded-b-lg text-white p-8" ]
   [ h1_ [ class_ "text-2xl mb-4" ] 
     [ text "Welcome to Blimp & Co"

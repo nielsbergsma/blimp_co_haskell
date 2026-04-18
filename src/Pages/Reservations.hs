@@ -1,14 +1,13 @@
 module Pages.Reservations
-  ( Model (..)
-  , Action (..)
-  , initModel
-  , updateModel
-  , viewModel
+  ( reservations
   ) where
 
 import Miso
+import Miso.Html.Element (div_)
+import Miso.Html.Property (class_)
+
 import Session
-import qualified Components.Icon as Icon
+import Components.Icon qualified as Icon
 
 
 data Model
@@ -21,16 +20,22 @@ data Action
   deriving (Eq)
 
 
-initModel :: Session -> Effect Action Model
-initModel _ = return Initialising
+reservations :: Session -> Component parent Model Action
+reservations session = 
+  component (initModel session) updateModel viewModel
 
 
-updateModel :: Action -> Model -> Effect Action Model
-updateModel NoOperation model = 
-  return model
+initModel :: Session -> Model
+initModel _ = 
+  Initialising
 
 
-viewModel :: Model -> View Action
+updateModel :: Action -> Effect parent Model Action 
+updateModel = 
+  noop
+
+
+viewModel :: Model -> View Model Action
 viewModel _ = 
   div_ [ class_ "flex justify-center items-center" ] 
   [ div_ [ class_ "bg-gray-800 text-white w-96 p-4 -mt-6 rounded-b-md text-center" ] 

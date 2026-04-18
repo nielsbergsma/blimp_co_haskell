@@ -1,57 +1,56 @@
 module Pages.FlightScheduling
-  ( Model (..)
-  , Action (..)
-  , initModel
-  , updateModel
-  , viewModel
+  ( flightScheduling
   ) where
 
-import Prelude hiding (show)
-import Data.Function ((&))
-import Data.List (sortOn)
-import Data.Text (Text, show)
 import Miso
+import Miso.Html.Element (div_, img_, a_, h2_, h3_)
+import Miso.Html.Property (class_, target_, href_, src_)
+import Components.Icon qualified as Icon
+import Components.FlightCalendar (flightCalendar)
 
 import Session (Session(..))
-import qualified Components.FlightCalendar as FlightCalendar
-import qualified Components.Icon as Icon
-import qualified Data.FlightScheduling as FlightSchedulingData
-import qualified Extensions.Effect as Effect
+import Data.List (sortOn)
+import Data.FlightScheduling qualified as FlightSchedulingData
 
 
 data Model
   = Initialising
-  | Ready { dashboard :: FlightSchedulingData.Dashboard, calendar :: FlightCalendar.Model }
-  | Failed Text
+  | Ready { dashboard :: FlightSchedulingData.Dashboard }
+  | Failed MisoString
   deriving (Eq)
 
 
 data Action 
-  = FetchedDashboard (Either Text FlightSchedulingData.Dashboard)
-  | FlightCalendarAction FlightCalendar.Action
+  = FetchDashboard
+  | FetchedDashboard (Either MisoString FlightSchedulingData.Dashboard)
   deriving (Eq)
 
 
-initModel :: Session -> Effect Action Model
+flightScheduling :: Session -> Component parent Model Action
+flightScheduling session = 
+  (component (initModel session) updateModel viewModel)
+    { mount = Just FetchDashboard }
+
+
+initModel :: Session -> Model
 initModel _ = 
-  Effect.return Initialising (FetchedDashboard <$> FlightSchedulingData.fetchDashboard)
+  Initialising
 
 
-updateModel :: Action -> Model -> Effect Action Model
-updateModel (FetchedDashboard (Left reason)) _ = 
-  return (Failed reason)
+updateModel :: Action -> Effect parent Model Action
+updateModel = \case
+  FetchDashboard ->
+    FlightSchedulingData.fetchDashboard FetchedDashboard
 
-updateModel (FetchedDashboard (Right dashboard)) _ = 
-  FlightCalendar.initModel dashboard & Effect.map (Ready dashboard) FlightCalendarAction
+  FetchedDashboard (Left reason) -> do
+    io_ (consoleLog reason)
+    modify $ const (Failed reason)
 
-updateModel (FlightCalendarAction action) model@(Ready {..}) = 
-  FlightCalendar.updateModel action calendar & Effect.map (setCalendar model) FlightCalendarAction
-
-updateModel _ model =
-  return model
+  FetchedDashboard (Right dashboard) ->
+    modify $ const (Ready { dashboard = dashboard })
 
 
-viewModel :: Model -> View Action
+viewModel :: Model -> View Model Action
 viewModel Initialising = 
   div_ [ class_ "flex justify-center items-center" ] 
   [ div_ [ class_ "bg-gray-800 text-white w-96 p-4 -mt-6 rounded-b-md text-center" ] 
@@ -68,115 +67,127 @@ viewModel (Failed _) =
     ]
   ]
 
-viewModel (Ready dashboard calendar) = 
+viewModel (Ready dashboard) = 
   div_ [ class_ "flex flex-col text-gray-700" ] 
   [ h2_ [ class_ "text-2xl mb-2" ] 
     [ text "Fleet"
     ]
   , div_ [ class_ "overflow-x-scroll whitespace-nowrap mb-8" ]
-    (viewAirship <$> sortOn (\airship -> airship.id) dashboard.airships)
+    ((\airship -> withKey (airshipCardKey airship) (airshipCard airship)) <$> sortOn (\airship -> airship.id) dashboard.airships)
   , h2_ [ class_ "text-2xl mb-2" ]
     [ text "Flights"
     ]
   , div_ [ class_ "mb-8" ]
-    [ FlightCalendarAction <$> FlightCalendar.viewModel calendar
+    [ "flight-calendar" +> flightCalendar dashboard
     ]
   , h2_ [ class_ "text-2xl mb-2" ]
     [ text "Airfields"
     ]
   , div_ [ class_ "overflow-x-scroll whitespace-nowrap mb-8" ]
-    (viewAirfield <$> sortOn (\airfield -> airfield.id) dashboard.airfields)
+    ((\airfield -> withKey (airfieldCardKey airfield) (airfieldCard airfield)) <$> sortOn (\airfield -> airfield.id) dashboard.airfields)
   ]
 
+-- airship card
+airshipCard :: FlightSchedulingData.Airship -> Component parent FlightSchedulingData.Airship ()
+airshipCard model = 
+  component model noop viewCard
+  where
+    viewCard airship = 
+      div_ [ class_ "bg-gray-50 rounded-md p-4 w-64 inline-block mr-4 mb-4" ]
+      [ h3_ [ class_ "text-xl mb-2" ]
+        [ text (FlightSchedulingData.formatAirshipId airship.id)
+        ]
+      , img_ [ class_ "rounded-md h-32 w-full object-cover", src_ (formatAirshipImageUrl airship) ]
+      , div_ [ class_ "text-xs pt-2 text-gray-400" ]
+        [ text "Name"
+        ]
+      , text (toMisoString airship.name)
+      , div_ [ class_ "text-xs pt-2 text-gray-400" ]
+        [ text "Model"
+        ]
+      , text (toMisoString airship.model)
+      , div_ [ class_ "text-xs pt-2 text-gray-400" ]
+        [ text "Registration code"
+        ]
+      , text (FlightSchedulingData.formatAirshipId airship.id)
+      , div_ [ class_ "text-xs pt-2 text-gray-400" ]
+        [ text "Number of seats"
+        ]
+      , text (toMisoString airship.numberOfSeats)
+      ]
 
-viewAirship :: FlightSchedulingData.Airship -> View Action
-viewAirship airship =
-  div_ [ class_ "bg-gray-50 rounded-md p-4 w-64 inline-block mr-4 mb-4" ]
-  [ h3_ [ class_ "text-xl mb-2" ]
-    [ text (FlightSchedulingData.formatAirshipId airship.id)
-    ]
-  , img_ [ class_ "rounded-md h-32 w-full object-cover", src_ (formatAirshipImageUrl airship) ]
-  , div_ [ class_ "text-xs pt-2 text-gray-400" ]
-    [ text "Name"
-    ]
-  , text airship.name
-  , div_ [ class_ "text-xs pt-2 text-gray-400" ]
-    [ text "Model"
-    ]
-  , text airship.model
-  , div_ [ class_ "text-xs pt-2 text-gray-400" ]
-    [ text "Registration code"
-    ]
-  , text (FlightSchedulingData.formatAirshipId airship.id)
-  , div_ [ class_ "text-xs pt-2 text-gray-400" ]
-    [ text "Number of seats"
-    ]
-  , text (show airship.numberOfSeats)
-  ]
+airshipCardKey :: FlightSchedulingData.Airship -> Key
+airshipCardKey airship = 
+  toKey $ "airship-card-" <> FlightSchedulingData.formatAirshipId airship.id
 
 
-viewAirfield :: FlightSchedulingData.Airfield -> View Action
-viewAirfield airfield = 
-  div_ [ class_ "bg-gray-50 rounded-md p-4 w-64 inline-block mr-4 mb-4" ]
-  [ h3_ [ class_ "text-xl mb-2" ]
-    [ text (FlightSchedulingData.formatAirfieldId airfield.id)
-    ]
-  , a_ [ target_ "_blank", href_ (formatLocationAsGoogleMapsUrl airfield.location) ]
-    [ img_ [ class_ "rounded-md h-32 w-full object-cover", src_ (formatAirfieldMapUrl airfield) ]
-    ]
-  , div_ [ class_ "text-xs pt-2 text-gray-400" ]
-    [ text "Name"
-    ]
-  , text airfield.name
-  , div_ [ class_ "text-xs pt-2 text-gray-400" ]
-    [ text "ICAO code"
-    ]
-  , text (FlightSchedulingData.formatAirfieldId airfield.id)
-  , div_ [ class_ "text-xs pt-2 text-gray-400" ]
-    [ text "Coordinates (DD)"
-    ]
-  , text (formatLocationCoordinatesDD airfield.location)
-  ]
+-- airfield card
+airfieldCard :: FlightSchedulingData.Airfield -> Component parent FlightSchedulingData.Airfield ()
+airfieldCard model = 
+  component model noop viewCard
+  where
+    viewCard airfield = 
+      div_ [ class_ "bg-gray-50 rounded-md p-4 w-64 inline-block mr-4 mb-4" ]
+      [ h3_ [ class_ "text-xl mb-2" ]
+        [ text (FlightSchedulingData.formatAirfieldId airfield.id)
+        ]
+      , a_ [ target_ "_blank", href_ (formatLocationAsGoogleMapsUrl airfield.location) ]
+        [ img_ [ class_ "rounded-md h-32 w-full object-cover", src_ (formatAirfieldMapUrl airfield) ]
+        ]
+      , div_ [ class_ "text-xs pt-2 text-gray-400" ]
+        [ text "Name"
+        ]
+      , text (toMisoString airfield.name)
+      , div_ [ class_ "text-xs pt-2 text-gray-400" ]
+        [ text "ICAO code"
+        ]
+      , text (FlightSchedulingData.formatAirfieldId airfield.id)
+      , div_ [ class_ "text-xs pt-2 text-gray-400" ]
+        [ text "Coordinates (DD)"
+        ]
+      , text (formatLocationCoordinatesDD airfield.location)
+      ]
+
+airfieldCardKey :: FlightSchedulingData.Airfield -> Key
+airfieldCardKey airfield = 
+  toKey $ "airfield-card-" <> FlightSchedulingData.formatAirfieldId airfield.id
 
 -- helpers
-formatAirshipImageUrl :: FlightSchedulingData.Airship -> Text
+formatAirshipImageUrl :: FlightSchedulingData.Airship -> MisoString
 formatAirshipImageUrl airship = 
-  "/img/airships/" <> airship.model <> ".webp"
+  "/img/airships/" <> (toMisoString airship.model) <> ".webp"
 
 
-formatAirfieldMapUrl :: FlightSchedulingData.Airfield -> Text
+formatAirfieldMapUrl :: FlightSchedulingData.Airfield -> MisoString
 formatAirfieldMapUrl airfield = 
   "/img/airfields/" <> (FlightSchedulingData.formatAirfieldId $ airfield.id) <> ".webp"
 
 
-formatLocationAsGoogleMapsUrl :: FlightSchedulingData.GeoHash -> Text
+formatLocationAsGoogleMapsUrl :: FlightSchedulingData.GeoHash -> MisoString
 formatLocationAsGoogleMapsUrl hash = 
-  "https://www.google.com/maps/search/?api=1&query=" <> show latitude <> "," <> show longitude
+  "https://www.google.com/maps/search/?api=1&query=" <> toMisoString latitude <> "," <> toMisoString longitude
     where 
       (latitude, longitude) = FlightSchedulingData.geoHashToLatLng hash
 
 
-formatLocationCoordinatesDD :: FlightSchedulingData.GeoHash -> Text
+formatLocationCoordinatesDD :: FlightSchedulingData.GeoHash -> MisoString
 formatLocationCoordinatesDD hash = 
   formattedLatitude <> ", " <> formattedLongitude
     where 
       formattedLatitude = 
         if latitude < 0
-          then (format2f -latitude) <> "° S"
-          else (format2f latitude) <> "° N"
+          then format2f (-latitude) <> "° S"
+          else format2f latitude <> "° N"
 
       formattedLongitude = 
         if longitude < 0
-          then (format2f -longitude) <> "° W"
-          else (format2f longitude) <> "° E"
+          then format2f (-longitude) <> "° W"
+          else format2f longitude <> "° E"
 
       (latitude, longitude) = 
         FlightSchedulingData.geoHashToLatLng hash
 
       format2f x = 
-        show $ fromIntegral (truncate (x * 100)) / 100
+        toMisoString $ fromIntegral (truncate (x * 100)) / 100
 
-
-setCalendar :: Model -> FlightCalendar.Model -> Model
-setCalendar (model@Ready {}) calendar = model { calendar = calendar }
-setCalendar model _ = model
+withKey key component_ = toMisoString key +> component_

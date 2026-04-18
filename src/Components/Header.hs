@@ -1,18 +1,17 @@
 module Components.Header 
-  ( Model
-  , Action(..)
-  , initModel
-  , updateModel
-  , viewModel
+  ( header
+  , headerKey
   ) where
 
-import Data.Text (Text)
 import Miso
+import Miso.Html.Element (ul_, li_, button_, div_, span_,  nav_, img_)
+import Miso.Html.Event (onClick)
+import Miso.Html.Property (class_, src_)
 
 import Session
-import qualified Extensions.Effect as Effect
-import qualified Routes
-import qualified Components.Icon as Icon
+import Routes
+import Components.Icon qualified as Icon
+import Data.Hashable (hash)
 
 
 data Model = Model
@@ -25,29 +24,38 @@ data Model = Model
 
 data Action
   = ToggleProfileMenu
+  | RedirectToPage Routes.Route
   | SignOut
-  | SignedOut
-  deriving (Show, Eq)
+  deriving (Eq)
+
+
+header :: Maybe Routes.Route -> Maybe Session -> Component parent Model Action
+header route session = 
+  component (initModel route session) updateModel viewModel
+
+headerKey :: Maybe Routes.Route -> Maybe Session -> Key
+headerKey route session = toKey $ hash (route, session)
 
 
 initModel :: Maybe Routes.Route -> Maybe Session -> Model
-initModel route session = Model { route = route, session = session, profileMenuOpen = False }
+initModel route session = 
+  Model { route = route, session = session, profileMenuOpen = False }
 
 
-updateModel :: Action -> Model -> Effect Action Model
-updateModel action model@(Model {..}) =
-  case action of
-    ToggleProfileMenu -> 
-      return (model { profileMenuOpen = not profileMenuOpen })
+updateModel :: Action -> Effect parent Model Action
+updateModel = \case
+  ToggleProfileMenu ->
+    modify $ \model -> model { profileMenuOpen = not model.profileMenuOpen }
 
-    SignOut -> 
-      Effect.return model (const SignedOut <$> signOut)
+  RedirectToPage route ->
+    redirect route
 
-    SignedOut ->
-      return (model { profileMenuOpen = False })
+  SignOut -> do
+    signOut
+    modify $ \model -> model { profileMenuOpen = False }
 
 
-viewModel :: Model -> View Action
+viewModel :: Model -> View Model Action
 viewModel model =
   div_ [ class_ "bg-gray-800 pb-64" ]
   [ nav_ [ class_ "bg-gray-800" ] 
@@ -75,7 +83,7 @@ viewModel model =
                     Nothing -> Icon.user [ class_ "h-7 w-7" ]
                 ]
               ]
-            , if model.profileMenuOpen 
+            , if model.profileMenuOpen
                 then viewProfileMenu
                 else noHtml
             ]
@@ -85,7 +93,7 @@ viewModel model =
     ]
   ]
 
-viewMenu :: Model -> View Action
+viewMenu :: Model -> View Model Action
 viewMenu model = 
   div_ [ class_ "ml-5 flex-grow flex flex-row" ]
   [ viewMenuItem model Routes.FlightScheduling "Flight scheduling" Icon.compass
@@ -93,7 +101,7 @@ viewMenu model =
   ]
 
 
-viewMenuItem :: Model -> Routes.Route -> Text -> Icon.Icon Action -> View Action
+viewMenuItem :: Model -> Routes.Route -> MisoString -> Icon.Icon Model Action -> View Model Action
 viewMenuItem model destination name icon = 
   if model.route == (Just destination) 
   then
@@ -105,14 +113,14 @@ viewMenuItem model destination name icon =
     ]
   else
     div_ [ class_ "mx-2 flex items-baseline space-x-4" ]
-    [ a_ [ href_ (Routes.toText destination), class_ "text-gray-300 rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-700 hover:text-white" ]
+    [ button_ [ onClick (RedirectToPage destination), class_ "text-gray-300 rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-700 hover:text-white" ]
       [ icon [ class_ "w-4 h-4 mr-2" ]
       , text name
       ]
     ]
 
 
-viewProfileMenu :: View Action
+viewProfileMenu :: View Model Action
 viewProfileMenu = 
   ul_ [ class_ "absolute bg-white top-9 right-1 w-48 p-2 text-sm rounded-md shadow-xl" ]
   [ li_ [ ] 
@@ -124,5 +132,5 @@ viewProfileMenu =
   ]
 
 
-noHtml :: View Action
+noHtml :: View Model Action
 noHtml = text ""

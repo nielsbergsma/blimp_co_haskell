@@ -3,13 +3,13 @@ function restoreSession() {
 }
 
 function signInDemo() {
-  const session = { name: "J. Blimp", photoUrl: null, token: "" };
+  const session = { name: "B. Blimp", photoUrl: null, token: "" };
   const event = new CustomEvent("signedin", { detail: JSON.stringify(session) });
   window.dispatchEvent(event);
 }
 
 function signOut() {
-  const event = new CustomEvent("signedout", { detail: JSON.stringify({}) });
+  const event = new CustomEvent("signedout", { detail: JSON.stringify([]) });
   window.dispatchEvent(event);
 }
 

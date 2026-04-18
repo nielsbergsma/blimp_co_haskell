@@ -1,67 +1,59 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Routes
   ( Route(..)
   , defaultRoute
-  , fromText
-  , toText
-  , currentRoute
-  , pushState
+  , redirect
+  , fromCurrentURI
   , subscribeToChanges
   ) where
 
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Text (Text, pack, unpack)
-import Data.Aeson ((.:), withObject)
-import GHC.Wasm.Prim
-import Miso (Decoder(..), DecodeTarget(..), Sub, windowSub)
+import Miso (Decoder(..), DecodeTarget(..), Effect, Sub, windowSub, getURI, io_, pushRoute)
+import Miso.Router (Router(..), path, toPath, routeParser, routes, route)
+import Miso.JSON
 
+import GHC.Generics (Generic)
+import Data.Hashable (Hashable)
 
 data Route
   = FlightScheduling
   | Reservations
-  deriving (Eq)
+  deriving (Eq, Generic, Hashable)
 
 
-fromText :: Text -> Maybe Route
-fromText "/flight-scheduling" = Just FlightScheduling
-fromText "/reservations" = Just Reservations
-fromText _ = Nothing
+instance Router Route where
+  routeParser = routes 
+    [ FlightScheduling <$ path "flight-scheduling"
+    , Reservations <$ path "reservations"
+    ]
+
+  fromRoute FlightScheduling = [ toPath "flight-scheduling" ]
+  fromRoute Reservations = [ toPath "reservations" ]
 
 
-toText :: Route -> Text
-toText FlightScheduling = "/flight-scheduling"
-toText Reservations = "/reservations"
+fromCurrentURI :: IO (Maybe Route)
+fromCurrentURI =
+  rightToMaybe . route <$> getURI
 
 
 defaultRoute :: Route
-defaultRoute = FlightScheduling
+defaultRoute = 
+  FlightScheduling
 
 
--- helpers
-currentRoute :: MonadIO m => m (Maybe Route)
-currentRoute = do
-  pathname <- liftIO jsLocationPathname
-  return . fromText . pack . fromJSString $ pathname
+redirect :: Router route => route -> Effect parent model action
+redirect destination = 
+  io_ (pushRoute destination)
 
 
-pushState :: MonadIO m => Route -> action -> m action
-pushState route action = do 
-  _ <- liftIO . jsHistoryPushState . toJSString . unpack . toText $ route
-  return action
-
-
-subscribeToChanges :: (Text -> action) -> Sub action
-subscribeToChanges action = windowSub "routechanged" decoder action
+subscribeToChanges :: (Maybe Route -> action) -> Sub action
+subscribeToChanges action = windowSub "routechanged" eventDecoder (action . rightToMaybe . toRoute)
   where
-    decoder = Decoder 
+    eventDecoder = Decoder 
       { decodeAt = DecodeTarget mempty
       , decoder = withObject "Event" $ \event -> event .: "detail"
-      }
+      }      
       
 
--- foreign imports / exports
-foreign import javascript safe "history.pushState({}, '', $1);"
-  jsHistoryPushState :: JSString -> IO ()
-
-
-foreign import javascript safe "return window.location.pathname;"
-  jsLocationPathname :: IO JSString
+rightToMaybe :: Either a b -> Maybe b
+rightToMaybe = either (const Nothing) Just
