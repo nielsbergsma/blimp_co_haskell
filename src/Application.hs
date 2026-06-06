@@ -2,7 +2,7 @@ module Application where
 
 import Components.Icon qualified as Icon
 import Components.SignInModal (signInModal)
-import Components.Header (header, headerKey)
+import Components.Header (header)
 import Pages.NotFound (notFound)
 import Pages.FlightScheduling (flightScheduling)
 import Pages.Reservations (reservations)
@@ -63,7 +63,7 @@ initModel route =
   Initialising { route = route }
 
 
-updateModel :: Action -> Effect parent Model Action
+updateModel :: Action -> Effect parent props Model Action
 updateModel = \case
   action@Initialise -> do
     -- route to default route if no valid route is present
@@ -90,8 +90,8 @@ updateModel = \case
     modify (setRoute newRoute)
 
 
-viewModel :: Model -> View Model Action
-viewModel (Initialising {}) =
+viewModel :: props -> Model -> View Model Action
+viewModel _ (Initialising {}) =
   div_ [ class_ "h-[100vh] bg-gray-800 animate-loaded" ] 
   [ div_ [ class_ "flex flex-col justify-center items-center text-gray-300" ] 
     [ div_ [ class_ "text-[16rem]"] 
@@ -106,12 +106,10 @@ viewModel (Initialising {}) =
     ]
   ]
 
-viewModel (NotSignedIn { route }) =
+viewModel _ (NotSignedIn { route }) =
   div_ [ class_ "min-h-full animate-loaded" ] 
   [ div_ [ ] 
-    [ div_ [ key_ (headerKey route Nothing) ]
-      [ "header" +> header route Nothing
-      ]
+    [ mountWithProps_ "header" (route, Nothing) header
     , div_ [ class_ "flex flex-col justify-center items-center text-gray-300" ] 
       [ div_ [ class_ "text-[16rem]"] 
         [ Icon.userSlash [ class_ "w-64 h-64" ]
@@ -126,11 +124,9 @@ viewModel (NotSignedIn { route }) =
     ]
   ]
 
-viewModel (SignedIn { route, session, page }) =
+viewModel _ (SignedIn { route, session, page }) =
   div_ [ class_ "min-h-full animate-loaded" ] 
-  [ div_ [ key_ (headerKey route (Just session)) ]
-    [ "header" +> header route (Just session)
-    ]
+  [ mountWithProps_ "header" (route, Just session) header
   , div_ [ class_ "p-8 -mt-64" ]
     [ h1_ [ class_ "text-3xl text-white"]
       [ text (pageTitle page)

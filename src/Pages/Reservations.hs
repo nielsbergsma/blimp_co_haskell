@@ -20,7 +20,7 @@ data Action
   deriving (Eq)
 
 
-reservations :: Session -> Component parent Model Action
+reservations :: Session -> Component parent props Model Action
 reservations session = 
   component (initModel session) updateModel viewModel
 
@@ -30,13 +30,13 @@ initModel _ =
   Initialising
 
 
-updateModel :: Action -> Effect parent Model Action 
-updateModel = 
+updateModel :: Action -> Effect parent props Model Action
+updateModel =
   noop
 
 
-viewModel :: Model -> View Model Action
-viewModel _ = 
+viewModel :: props -> Model -> View Model Action
+viewModel _ _ =
   div_ [ class_ "flex justify-center items-center" ] 
   [ div_ [ class_ "bg-gray-800 text-white w-96 p-4 -mt-6 rounded-b-md text-center" ] 
     [ Icon.spinner [ class_ "w-4 h-4 mr-2" ]

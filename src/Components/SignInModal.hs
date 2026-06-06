@@ -10,7 +10,7 @@ import Miso.Html.Property (class_)
 import Components.Icon as Icon
 import Session (signInDemo)
 
-signInModal :: Component parent Model Action
+signInModal :: Component parent props Model Action
 signInModal = 
   component initModel updateModel viewModel
 
@@ -25,12 +25,12 @@ data Action
   = SignInDemo
   deriving (Eq)
 
-updateModel :: Action -> Effect parent Model Action
-updateModel SignInDemo = 
+updateModel :: Action -> Effect parent props Model Action
+updateModel SignInDemo =
   signInDemo
 
-viewModel :: Model -> View Model Action
-viewModel _ = 
+viewModel :: props -> Model -> View Model Action
+viewModel _ _ =
   div_ [ class_ "bg-gray-800 w-[48rem] shadow-2xl rounded-b-lg text-white p-8" ]
   [ h1_ [ class_ "text-2xl mb-4" ] 
     [ text "Welcome to Blimp & Co"

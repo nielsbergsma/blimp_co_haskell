@@ -13,28 +13,14 @@ import Miso (Decoder(..), DecodeTarget(..), Effect, Sub, windowSub, MisoString, 
 import Miso.FFI.QQ (js)
 import Miso.JSON
 
-import GHC.Generics (Generic)
-import Data.Hashable (Hashable (hashWithSalt), hash)
-
-data Session = Session 
+data Session = Session
   { name :: MisoString
   , photoUrl :: Maybe MisoString
-  , token :: MisoString 
+  , token :: MisoString
   } deriving (Eq)
 
-instance Hashable Session where
-  hashWithSalt salt (Session{..}) = 
-    salt
-      `hashWithSalt` toString name
-      `hashWithSalt` fmap toString photoUrl
-      `hashWithSalt` toString token
-      
-      where 
-        toString :: MisoString -> String
-        toString = fromMisoString
 
-
-signInDemo :: Effect parent model action
+signInDemo :: Effect parent props model action
 signInDemo = io_ [js| signInDemo() |]
 
 subscribeToSignedIn :: (Session -> action) -> Sub action
@@ -46,7 +32,7 @@ subscribeToSignedIn action = windowSub "signedin" decoder action
       }
 
 
-signOut :: Effect parent model action
+signOut :: Effect parent props model action
 signOut = io_ [js| signOut() |]
 
 subscribeToSignedOut :: action -> Sub action
@@ -58,7 +44,7 @@ subscribeToSignedOut action = windowSub "signedout" decoder (const action)
       }
 
 
-restore :: Effect parent model action
+restore :: Effect parent props model action
 restore = io_ [js| restoreSession() |]
 
 -- decoders

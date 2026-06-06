@@ -12,13 +12,10 @@ import Miso (Decoder(..), DecodeTarget(..), Effect, Sub, windowSub, getURI, io_,
 import Miso.Router (Router(..), path, toPath, routeParser, routes, route)
 import Miso.JSON
 
-import GHC.Generics (Generic)
-import Data.Hashable (Hashable)
-
 data Route
   = FlightScheduling
   | Reservations
-  deriving (Eq, Generic, Hashable)
+  deriving (Eq)
 
 
 instance Router Route where
@@ -41,7 +38,7 @@ defaultRoute =
   FlightScheduling
 
 
-redirect :: Router route => route -> Effect parent model action
+redirect :: Router route => route -> Effect parent props model action
 redirect destination = 
   io_ (pushRoute destination)
 

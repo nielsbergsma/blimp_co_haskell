@@ -129,7 +129,7 @@ instance Eq ZonedTime where
   (ZonedTime lt1 tz1) == (ZonedTime lt2 tz2) = lt1 == lt2 && tz1 == tz2
 
 
-fetchDashboard :: (Either MisoString Dashboard -> action) -> Effect parent model action
+fetchDashboard :: (Either MisoString Dashboard -> action) -> Effect parent props model action
 fetchDashboard toAction = do
   getJSON (backendUrl <> "/dashboard") [] (toAction . Right . body) (toAction . Left . body)
 

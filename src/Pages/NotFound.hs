@@ -15,7 +15,7 @@ data Action
   deriving (Eq)
 
 
-notFound :: Component parent Model Action
+notFound :: Component parent props Model Action
 notFound = 
   component initModel updateModel viewModel
 
@@ -24,11 +24,11 @@ initModel :: Model
 initModel = Ready
 
 
-updateModel :: Action -> Effect parent Model Action
-updateModel = 
+updateModel :: Action -> Effect parent props Model Action
+updateModel =
   noop
 
 
-viewModel :: Model -> View Model Action
-viewModel _ = 
+viewModel :: props -> Model -> View Model Action
+viewModel _ _ =
   text "Page cannot be found"

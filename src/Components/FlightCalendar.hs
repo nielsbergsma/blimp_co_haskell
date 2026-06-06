@@ -45,7 +45,7 @@ data Action
   deriving (Eq)
 
 
-flightCalendar :: FlightSchedulingData.Dashboard -> Component parent Model Action
+flightCalendar :: FlightSchedulingData.Dashboard -> Component parent props Model Action
 flightCalendar dashboard = 
   component (initModel dashboard) updateModel viewModel
 
@@ -54,9 +54,9 @@ initModel :: FlightSchedulingData.Dashboard -> Model
 initModel dashboard = 
   (Model dashboard (yearMonthFromUTCTime defaultUTCTime) defaultUTCTime mempty mempty Nothing)
 
-updateModel :: Action -> Effect parent Model Action
+updateModel :: Action -> Effect parent props Model Action
 updateModel = \case
-  (SetTime time) -> 
+  (SetTime time) ->
     modify $ \model -> model { time = time, month = yearMonthFromUTCTime time }
 
   (SetMonth month) ->
@@ -82,8 +82,8 @@ updateModel = \case
 
 
 
-viewModel :: Model -> View Model Action
-viewModel (Model {..}) = 
+viewModel :: props -> Model -> View Model Action
+viewModel _ (Model {..}) =
   div_ []
   [ viewRouteFilters (flightRoutes dashboard.flights) filteredRoutes
   , viewAirshipFilters dashboard.airships filteredAirships

@@ -26,7 +26,7 @@ data Action
   deriving (Eq)
 
 
-flightScheduling :: Session -> Component parent Model Action
+flightScheduling :: Session -> Component parent props Model Action
 flightScheduling session = 
   (component (initModel session) updateModel viewModel)
     { mount = Just FetchDashboard }
@@ -37,7 +37,7 @@ initModel _ =
   Initialising
 
 
-updateModel :: Action -> Effect parent Model Action
+updateModel :: Action -> Effect parent props Model Action
 updateModel = \case
   FetchDashboard ->
     FlightSchedulingData.fetchDashboard FetchedDashboard
@@ -50,8 +50,8 @@ updateModel = \case
     modify $ const (Ready { dashboard = dashboard })
 
 
-viewModel :: Model -> View Model Action
-viewModel Initialising = 
+viewModel :: props -> Model -> View Model Action
+viewModel _ Initialising =
   div_ [ class_ "flex justify-center items-center" ] 
   [ div_ [ class_ "bg-gray-800 text-white w-96 p-4 -mt-6 rounded-b-md text-center" ] 
     [ Icon.spinner [ class_ "w-4 h-4 mr-2" ]
@@ -59,7 +59,7 @@ viewModel Initialising =
     ]
   ]
 
-viewModel (Failed _) = 
+viewModel _ (Failed _) =
   div_ [ class_ "flex justify-center items-center" ] 
   [ div_ [ class_ "bg-gray-800 text-gray-600 text-white w-96 p-4 -mt-6 rounded-b-md text-center" ] 
     [ Icon.heartCrack [ class_ "w-4 h-4 mr-2" ]
@@ -67,13 +67,13 @@ viewModel (Failed _) =
     ]
   ]
 
-viewModel (Ready dashboard) = 
+viewModel _ (Ready dashboard) =
   div_ [ class_ "flex flex-col text-gray-700" ] 
   [ h2_ [ class_ "text-2xl mb-2" ] 
     [ text "Fleet"
     ]
   , div_ [ class_ "overflow-x-scroll whitespace-nowrap mb-8" ]
-    ((\airship -> withKey (airshipCardKey airship) (airshipCard airship)) <$> sortOn (\airship -> airship.id) dashboard.airships)
+    ((\airship -> mountWithProps_ (airshipCardKey airship) airship airshipCard) <$> sortOn (\airship -> airship.id) dashboard.airships)
   , h2_ [ class_ "text-2xl mb-2" ]
     [ text "Flights"
     ]
@@ -84,15 +84,15 @@ viewModel (Ready dashboard) =
     [ text "Airfields"
     ]
   , div_ [ class_ "overflow-x-scroll whitespace-nowrap mb-8" ]
-    ((\airfield -> withKey (airfieldCardKey airfield) (airfieldCard airfield)) <$> sortOn (\airfield -> airfield.id) dashboard.airfields)
+    ((\airfield -> mountWithProps_ (airfieldCardKey airfield) airfield airfieldCard) <$> sortOn (\airfield -> airfield.id) dashboard.airfields)
   ]
 
 -- airship card
-airshipCard :: FlightSchedulingData.Airship -> Component parent FlightSchedulingData.Airship ()
-airshipCard model = 
-  component model noop viewCard
+airshipCard :: Component parent FlightSchedulingData.Airship () ()
+airshipCard =
+  component () noop viewCard
   where
-    viewCard airship = 
+    viewCard airship _ =
       div_ [ class_ "bg-gray-50 rounded-md p-4 w-64 inline-block mr-4 mb-4" ]
       [ h3_ [ class_ "text-xl mb-2" ]
         [ text (FlightSchedulingData.formatAirshipId airship.id)
@@ -116,17 +116,17 @@ airshipCard model =
       , text (toMisoString airship.numberOfSeats)
       ]
 
-airshipCardKey :: FlightSchedulingData.Airship -> Key
-airshipCardKey airship = 
-  toKey $ "airship-card-" <> FlightSchedulingData.formatAirshipId airship.id
+airshipCardKey :: FlightSchedulingData.Airship -> MisoString
+airshipCardKey airship =
+  "airship-card-" <> FlightSchedulingData.formatAirshipId airship.id
 
 
 -- airfield card
-airfieldCard :: FlightSchedulingData.Airfield -> Component parent FlightSchedulingData.Airfield ()
-airfieldCard model = 
-  component model noop viewCard
+airfieldCard :: Component parent FlightSchedulingData.Airfield () ()
+airfieldCard =
+  component () noop viewCard
   where
-    viewCard airfield = 
+    viewCard airfield _ =
       div_ [ class_ "bg-gray-50 rounded-md p-4 w-64 inline-block mr-4 mb-4" ]
       [ h3_ [ class_ "text-xl mb-2" ]
         [ text (FlightSchedulingData.formatAirfieldId airfield.id)
@@ -148,9 +148,9 @@ airfieldCard model =
       , text (formatLocationCoordinatesDD airfield.location)
       ]
 
-airfieldCardKey :: FlightSchedulingData.Airfield -> Key
-airfieldCardKey airfield = 
-  toKey $ "airfield-card-" <> FlightSchedulingData.formatAirfieldId airfield.id
+airfieldCardKey :: FlightSchedulingData.Airfield -> MisoString
+airfieldCardKey airfield =
+  "airfield-card-" <> FlightSchedulingData.formatAirfieldId airfield.id
 
 -- helpers
 formatAirshipImageUrl :: FlightSchedulingData.Airship -> MisoString
@@ -187,7 +187,5 @@ formatLocationCoordinatesDD hash =
       (latitude, longitude) = 
         FlightSchedulingData.geoHashToLatLng hash
 
-      format2f x = 
-        toMisoString $ fromIntegral (truncate (x * 100)) / 100
-
-withKey key component_ = toMisoString key +> component_
+      format2f x =
+        toMisoString (fromIntegral (truncate (x * 100)) / 100 :: Double)
